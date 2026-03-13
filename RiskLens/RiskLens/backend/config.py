@@ -29,4 +29,9 @@ class Config:
     FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
     
     # CORS
-    CORS_ORIGINS = [FRONTEND_URL]
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip() for origin in os.environ.get(
+            'CORS_ALLOWED_ORIGINS',
+            f"{FRONTEND_URL},http://localhost:5173,http://127.0.0.1:5173,http://localhost:5000,http://127.0.0.1:5000"
+        ).split(',') if origin.strip()
+    ]

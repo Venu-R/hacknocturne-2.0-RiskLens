@@ -21,10 +21,16 @@ def create_app(config_class=Config):
                 static_url_path='/static')
     app.config.from_object(config_class)
 
+    frontend_url = app.config.get('FRONTEND_URL', 'http://localhost:5173')
+    cors_env = os.environ.get('CORS_ALLOWED_ORIGINS', '')
+    if cors_env.strip():
+        cors_origins = [origin.strip() for origin in cors_env.split(',') if origin.strip()]
+    else:
+        cors_origins = [frontend_url, 'http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5000', 'http://127.0.0.1:5000']
+
     # Initialize extensions
     db.init_app(app)
-    CORS(app, origins=['http://localhost:5173', 'http://127.0.0.1:5173',
-                       'http://localhost:5000', 'http://127.0.0.1:5000'], supports_credentials=True)
+    CORS(app, origins=cors_origins, supports_credentials=True)
     login_manager.init_app(app)
     jwt.init_app(app)
 

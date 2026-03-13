@@ -35,6 +35,12 @@ class Config:
     JIRA_CLIENT_SECRET = os.environ.get('JIRA_CLIENT_SECRET', '')
     JIRA_REDIRECT_URI = os.environ.get('JIRA_REDIRECT_URI', 'http://127.0.0.1:5000/auth/callback/jira')
     FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip() for origin in os.environ.get(
+            'CORS_ALLOWED_ORIGINS',
+            f"{FRONTEND_URL},http://localhost:5173,http://127.0.0.1:5173,http://localhost:5000,http://127.0.0.1:5000"
+        ).split(',') if origin.strip()
+    ]
 
 
 def create_app():
@@ -46,9 +52,7 @@ def create_app():
     app.config.from_object(Config)
 
     db.init_app(app)
-    CORS(app, origins=['http://localhost:5173', 'http://127.0.0.1:5173',
-                       'http://localhost:5000', 'http://127.0.0.1:5000'],
-         supports_credentials=True)
+    CORS(app, origins=app.config.get('CORS_ALLOWED_ORIGINS', []), supports_credentials=True)
     login_manager.init_app(app)
     jwt.init_app(app)
 
@@ -357,7 +361,10 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
+    host = os.environ.get('HOST', '0.0.0.0')
+    port = int(os.environ.get('PORT', '5000'))
+    debug = os.environ.get('FLASK_DEBUG', '0') == '1'
     print("\nStarting RiskLens Server...")
-    print("API:      http://localhost:5000/api")
-    print("Frontend: http://localhost:5173 (run npm run dev in frontend/)\n")
-    app.run(debug=True, port=5000)
+    print(f"API:      http://localhost:{port}/api")
+    print("Frontend: Set FRONTEND_URL and CORS_ALLOWED_ORIGINS for your deployed app\n")
+    app.run(host=host, port=port, debug=debug)
