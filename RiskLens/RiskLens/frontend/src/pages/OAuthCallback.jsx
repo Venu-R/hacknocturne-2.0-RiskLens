@@ -18,7 +18,7 @@ export default function OAuthCallback() {
 
     if (token) {
       handleOAuthCallback(token)
-        .then(() => navigate('/'))
+        .then(() => navigate('/dashboard'))
         .catch(() => navigate('/login?error=auth_failed'));
     } else {
       navigate('/login');

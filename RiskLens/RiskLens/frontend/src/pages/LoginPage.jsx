@@ -76,7 +76,7 @@ export default function LoginPage() {
               className="w-full flex items-center justify-center gap-3 bg-[#0052cc] hover:bg-[#0747a6] text-white py-3 px-4 rounded-lg transition-all duration-200"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.213h2.13v2.574A5.218 5.218 0 0 0 12.574 24V12.513a1 1 0 0 0-1.003-1.001zM17.867 6.3H6.296a5.218 5.218 0 0 0 5.232 5.213h2.13v2.574A5.218 5.218 0 0 0 18.87 19.2V7.3a1 1 0 0 0-1.003-1zm5.133-6.3H11.43a5.218 5.218 0 0 0 5.232 5.213h2.13v2.574A5.218 5.218 0 0 0 24 12.513V1a1 1 0 0 0-1-1z"/>
+                <path d="M0 3v18h24V3H0zm17.066 16l-4.578-4.578 1.414-1.414 3.164 3.164L21.95 7.5l1.414 1.414L17.066 19z"/>
               </svg>
               Continue with Jira
             </button>

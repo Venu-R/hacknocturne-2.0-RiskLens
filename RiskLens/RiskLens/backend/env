@@ -6,6 +6,11 @@
 GITHUB_CLIENT_ID=Ov23li1fh7ltwFGPVjrB
 GITHUB_CLIENT_SECRET=e4761be9ec0286f724d93679089526c41feaa7d5
 
+
+JIRA_CLIENT_ID=XPXdUTjcGxl4DQxn0o9omFKM8qGhGiXD
+JIRA_CLIENT_SECRET=ATOAMA9soooZDz79zKMfVZRlggHaQQCU6x6nkEeP1dZgwUxbk_QTsHkFdjb1rEJXYiyg123D9FEE
+JIRA_REDIRECT_URI=http://127.0.0.1:5000/auth/callback/jira
+
 # Flask Configuration
 SECRET_KEY=your-secret-key-here
 JWT_SECRET_KEY=your-jwt-secret-key-here

@@ -327,15 +327,20 @@ def create_app():
 
     @app.route('/api/auth/jira')
     def jira_login():
+        # Check if credentials are configured
+        if not app.config['JIRA_CLIENT_ID'] or not app.config['JIRA_CLIENT_SECRET']:
+            return jsonify({
+                'error': 'Jira OAuth not configured',
+                'message': 'Please set JIRA_CLIENT_ID and JIRA_CLIENT_SECRET environment variables'
+            }), 500
+        
         state = generate_state('jira')
         params = {
-            'audience': 'api.atlassian.com',
             'client_id': app.config['JIRA_CLIENT_ID'],
-            'scope': 'read:jira-user read:jira-work write:jira-work offline_access',
+            'scope': 'read:me read:account offline_access',
             'redirect_uri': app.config['JIRA_REDIRECT_URI'],
             'state': state,
-            'response_type': 'code',
-            'prompt': 'consent'
+            'response_type': 'code'
         }
         url = f"https://auth.atlassian.com/authorize?{urlencode(params)}"
         return redirect(url)
@@ -418,6 +423,32 @@ def create_app():
         
         return redirect(f"{app.config['FRONTEND_URL']}/auth/callback?token={jwt_token}")
 
+    @app.route('/auth/callback/jira', endpoint='jira_oauth_callback')
+    def jira_callback():
+        from flask import request
+        token = request.args.get('token')
+        
+        if not token:
+            return jsonify({'error': 'No token provided'}), 400
+        
+        # Serve HTML page that handles the token
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Jira OAuth Callback</title>
+            <script>
+                const token = '{token}';
+                localStorage.setItem('token', token);
+                window.location.href = '/dashboard';
+            </script>
+        </head>
+        <body>
+            <p>Redirecting to dashboard...</p>
+        </body>
+        </html>
+        """
+
     @app.route('/auth/callback')
     def oauth_callback():
         from flask import request
@@ -486,13 +517,13 @@ def create_app():
                 'message': 'Run "npm run build" in frontend directory'
             }), 500
         
-        # Try to serve static file
+        # Try to serve static file first (CSS, JS, images)
         if path:
             file_path = os.path.join(app.static_folder, path)
             if os.path.exists(file_path) and os.path.isfile(file_path):
                 return send_from_directory(app.static_folder, path)
         
-        # Serve index.html for React Router
+        # For all other routes, serve index.html (React Router handles routing)
         index_path = os.path.join(app.static_folder, 'index.html')
         if os.path.exists(index_path):
             return send_from_directory(app.static_folder, 'index.html')
