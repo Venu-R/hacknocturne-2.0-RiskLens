@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/index";
+import { DEMO_SCENARIOS, DEMO_TEAM_OPTIONS } from "../data/demoScenarios";
 
 /* ─── DESIGN TOKENS ─────────────────────────────────────────── */
 const T = {
@@ -374,7 +375,22 @@ function BCard({ children, style={}, delay=0, glow=false, accent=false }) {
 /* ─── NAV ────────────────────────────────────────────────────── */
 const NAV_LINKS = ["Dashboard","Developers","GitHub","Jira","Slack","Alerts"];
 
-function TopBar({ active, setActive, sec, user, onLogout, onRunAnalysis, analyzing, themeMode, onToggleTheme, hasActiveAlerts }) {
+function TopBar({
+  active,
+  setActive,
+  sec,
+  user,
+  onLogout,
+  onRunAnalysis,
+  analyzing,
+  themeMode,
+  onToggleTheme,
+  hasActiveAlerts,
+  demoMode,
+  onToggleDemoMode,
+  selectedTeam,
+  onSelectTeam,
+}) {
   const initials = user?.username ? user.username.slice(0,2).toUpperCase() : "??";
   return (
     <header style={{
@@ -424,6 +440,22 @@ function TopBar({ active, setActive, sec, user, onLogout, onRunAnalysis, analyzi
           <div style={{ width:6, height:6, borderRadius:"50%", background:T.low, boxShadow:`0 0 8px ${T.low}`, animation:"blink 1.5s infinite" }}/>
           LIVE · {sec}s
         </div>
+        <button
+          onClick={onToggleDemoMode}
+          style={{ border:`1px solid ${demoMode ? T.accHi : T.b1}`, background:demoMode?"rgba(59,107,245,0.14)":"transparent", color:demoMode?T.accHi:T.sub, borderRadius:8, padding:"6px 10px", fontSize:10, cursor:"pointer", fontFamily:"'JetBrains Mono',monospace" }}
+        >
+          {demoMode ? "Demo: ON" : "Demo: OFF"}
+        </button>
+        <select
+          value={selectedTeam}
+          onChange={(e) => onSelectTeam(e.target.value)}
+          disabled={!demoMode}
+          style={{ border:`1px solid ${T.b1}`, background:"transparent", color:T.sub, borderRadius:8, padding:"6px 8px", fontSize:10, fontFamily:"'JetBrains Mono',monospace", opacity:demoMode?1:0.6 }}
+        >
+          {DEMO_TEAM_OPTIONS.map((t) => (
+            <option key={t.value} value={t.value}>{t.label}</option>
+          ))}
+        </select>
         <button onClick={onRunAnalysis} disabled={analyzing} style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 16px", borderRadius:8, fontSize:10, fontFamily:"'JetBrains Mono',monospace", cursor:analyzing?"not-allowed":"pointer", background:analyzing?"rgba(59,107,245,0.3)":`linear-gradient(135deg,${T.acc},${T.accLo})`, color:"white", border:"none", fontWeight:700, letterSpacing:"0.05em", boxShadow:"0 0 20px rgba(59,107,245,0.4)", transition:"all 0.15s", opacity:analyzing?0.7:1 }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5,3 19,12 5,21"/></svg>
           {analyzing ? "Analyzing..." : "Run Analysis"}
@@ -1107,10 +1139,36 @@ export default function Dashboard() {
   const [jiraLoading, setJiraLoading] = useState(false);
   const [slackEvents, setSlackEvents] = useState([]);
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem("risklens-theme") || "dark");
+  const [demoMode, setDemoMode] = useState(() => localStorage.getItem("risklens-demo-mode") === "true");
+  const [selectedTeam, setSelectedTeam] = useState(() => localStorage.getItem("risklens-demo-team") || "low");
 
   useEffect(() => {
     applyTheme(themeMode);
   }, [themeMode]);
+
+  const applyDemoScenario = (teamKey) => {
+    const scenario = DEMO_SCENARIOS[teamKey] || DEMO_SCENARIOS.low;
+    setIntegrationStatus(scenario.integrationStatus);
+    setRiskResult(scenario.riskResult);
+    setDevelopers(scenario.developers);
+    setRepoStats(scenario.repoStats);
+    setGithubEvents(scenario.githubEvents);
+    setCommitTrend(scenario.commitTrend);
+    setJiraIssues(scenario.jiraIssues);
+    setJiraSummary(scenario.jiraSummary);
+    setSlackEvents(scenario.slackEvents);
+    setRepos(
+      scenario.repoStats.map((r, idx) => ({
+        id: idx + 1,
+        name: r.name,
+        full_name: `demo/${r.name}`,
+        private: false,
+        updated_at: new Date().toISOString(),
+      }))
+    );
+    setGithubDataLoading(false);
+    setJiraLoading(false);
+  };
 
   const rawTeamScore = developers.length
     ? Math.round(developers.reduce((sum, d) => sum + d.s, 0) / developers.length)
@@ -1131,6 +1189,7 @@ export default function Dashboard() {
 
   // Fetch integration status & repos on mount
   useEffect(() => {
+    if (demoMode) return;
     let mounted = true;
 
     const refreshConnections = () => {
@@ -1151,9 +1210,10 @@ export default function Dashboard() {
     refreshConnections();
     const id = setInterval(refreshConnections, 60000);
     return () => { mounted = false; clearInterval(id); };
-  }, []);
+  }, [demoMode]);
 
   useEffect(() => {
+    if (demoMode) return;
     if (!repos.length) {
       setRepoStats([]);
       setGithubEvents([]);
@@ -1293,9 +1353,10 @@ export default function Dashboard() {
     fetchEventsAndDevelopers().finally(() => {
       setGithubDataLoading(false);
     });
-  }, [repos, riskResult?.score, user?.username, integrationStatus?.slack_channel]);
+  }, [repos, riskResult?.score, user?.username, integrationStatus?.slack_channel, demoMode]);
 
   useEffect(() => {
+    if (demoMode) return;
     if (!integrationStatus?.jira) {
       setJiraIssues([]);
       setJiraSummary({ total:0, due24h:0, due48h:0, done:0 });
@@ -1339,7 +1400,7 @@ export default function Dashboard() {
     refreshJira();
     const id = setInterval(refreshJira, 60000);
     return () => { mounted = false; clearInterval(id); };
-  }, [integrationStatus?.jira]);
+  }, [integrationStatus?.jira, demoMode]);
 
   const handleLogout = async () => {
     await logout();
@@ -1347,6 +1408,14 @@ export default function Dashboard() {
   };
 
   const handleRunAnalysis = async () => {
+    if (demoMode) {
+      setAnalyzing(true);
+      setTimeout(() => {
+        applyDemoScenario(selectedTeam);
+        setAnalyzing(false);
+      }, 500);
+      return;
+    }
     if (repos.length === 0) return;
     setAnalyzing(true);
     try {
@@ -1372,6 +1441,25 @@ export default function Dashboard() {
       localStorage.setItem("risklens-theme", next);
       return next;
     });
+  };
+
+  const handleToggleDemoMode = () => {
+    setDemoMode((prev) => {
+      const next = !prev;
+      localStorage.setItem("risklens-demo-mode", String(next));
+      if (next) {
+        applyDemoScenario(selectedTeam);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectTeam = (teamKey) => {
+    setSelectedTeam(teamKey);
+    localStorage.setItem("risklens-demo-team", teamKey);
+    if (demoMode) {
+      applyDemoScenario(teamKey);
+    }
   };
 
   return (
@@ -1404,6 +1492,10 @@ export default function Dashboard() {
         themeMode={themeMode}
         onToggleTheme={handleToggleTheme}
         hasActiveAlerts={hasActiveAlerts}
+        demoMode={demoMode}
+        onToggleDemoMode={handleToggleDemoMode}
+        selectedTeam={selectedTeam}
+        onSelectTeam={handleSelectTeam}
       />
 
       <main style={{ paddingTop:80, position:"relative", zIndex:1 }}>
