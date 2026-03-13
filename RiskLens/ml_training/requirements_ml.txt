@@ -1,0 +1,23 @@
+# requirements_ml.txt
+# ─────────────────────────────────────────────────────────────────────────────
+# RiskLens — ML Training Dependencies
+# Install ONLY in the ml_training environment (not the Flask container).
+#
+# Usage:
+#   pip install -r requirements_ml.txt
+#
+# ⚠️  Pin these exact versions. joblib version MUST match backend/requirements.txt
+#     to ensure model.pkl loads correctly inside the Flask Docker container.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Core ML
+scikit-learn==1.4.2
+joblib==1.3.2
+
+# Data
+pandas==2.2.1
+numpy==1.26.4
+
+# Visualisation (training/EDA only — NOT needed in Flask container)
+matplotlib==3.8.4
+seaborn==0.13.2
