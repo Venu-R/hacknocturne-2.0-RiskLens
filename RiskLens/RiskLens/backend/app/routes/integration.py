@@ -173,6 +173,7 @@ def integration_status():
         'github': bool(user.github_token),
         'jira':   bool(user.jira_token),
         'slack':  bool(os.environ.get('SLACK_WEBHOOK_URL')),
+        'slack_channel': os.environ.get('SLACK_CHANNEL_NAME', '#risklens-alerts'),
         'github_user': user.username if user.github_token else None,
         'jira_site':   user.jira_cloud_id if user.jira_token else None,
     })

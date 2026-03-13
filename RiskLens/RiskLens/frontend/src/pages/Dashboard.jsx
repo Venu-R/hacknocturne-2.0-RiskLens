@@ -374,22 +374,23 @@ function BCard({ children, style={}, delay=0, glow=false, accent=false }) {
 /* ─── NAV ────────────────────────────────────────────────────── */
 const NAV_LINKS = ["Dashboard","Developers","GitHub","Jira","Slack","Alerts"];
 
-function TopBar({ active, setActive, sec, user, onLogout, onRunAnalysis, analyzing, themeMode, onToggleTheme }) {
+function TopBar({ active, setActive, sec, user, onLogout, onRunAnalysis, analyzing, themeMode, onToggleTheme, hasActiveAlerts }) {
   const initials = user?.username ? user.username.slice(0,2).toUpperCase() : "??";
   return (
     <header style={{
       position:"fixed", top:0, left:0, right:0, height:56, zIndex:50,
-      background:"rgba(3,6,15,0.9)", backdropFilter:"blur(20px)",
+      background: themeMode === "light" ? "#F3F7FF" : "rgba(3,6,15,0.9)",
+      backdropFilter: themeMode === "light" ? "none" : "blur(20px)",
       borderBottom:`1px solid ${T.b0}`,
+      boxShadow: themeMode === "light" ? "0 1px 0 rgba(120,150,220,0.18)" : "none",
       display:"flex", alignItems:"center", paddingInline:24, gap:0,
     }}>
       <div style={{ display:"flex", alignItems:"center", gap:10, marginRight:36, flexShrink:0 }}>
         <CatLogo size={34}/>
         <div>
-          <div style={{ fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:800, letterSpacing:"-0.3px", lineHeight:1, color:T.txt }}>
-            Risk<span style={{ color:T.accHi }}>Lens</span>
+          <div style={{ fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:800, letterSpacing:"-0.3px", lineHeight:1, color:"#D8E8FF" }}>
+            Risk<span style={{ color:"#7EB4FF" }}>Lens</span>
           </div>
-          <div style={{ fontSize:7, color:T.mut, letterSpacing:"0.22em", marginTop:1, fontFamily:"'JetBrains Mono',monospace" }}>DEPLOY CO-PILOT</div>
         </div>
       </div>
 
@@ -404,7 +405,7 @@ function TopBar({ active, setActive, sec, user, onLogout, onRunAnalysis, analyzi
               color:isActive?T.accHi:T.sub, transition:"all 0.15s", position:"relative",
             }}>
               {n}
-              {n==="Alerts" && <span style={{ position:"absolute", top:4, right:4, width:5, height:5, borderRadius:"50%", background:T.crit, boxShadow:`0 0 7px ${T.crit}`, animation:"blink 2s infinite" }}/>}
+              {n==="Alerts" && hasActiveAlerts && <span style={{ position:"absolute", top:4, right:4, width:5, height:5, borderRadius:"50%", background:T.crit, boxShadow:`0 0 7px ${T.crit}`, animation:"blink 2s infinite" }}/>}
               {isActive && <div style={{ position:"absolute", bottom:-1, left:"20%", right:"20%", height:1.5, background:T.accHi, borderRadius:1 }}/>}
             </button>
           );
@@ -638,8 +639,19 @@ function JiraTab({ jiraIssues, jiraSummary, jiraLoading, jiraConnected }) {
 /* ─── SLACK TAB ──────────────────────────────────────────────── */
 function SlackTab({ integrationStatus, slackEvents }) {
   const connected = Boolean(integrationStatus?.slack);
+  const configuredChannel = integrationStatus?.slack_channel || "#risklens-alerts";
   const events = slackEvents || [];
   const flagged = events.filter((e) => e.flagged).length;
+  const channelCoverage = events.reduce((acc, e) => {
+    const key = e.ch || configuredChannel;
+    if (!acc[key]) acc[key] = { msgs: 0, flagged: 0 };
+    acc[key].msgs += 1;
+    if (e.flagged) acc[key].flagged += 1;
+    return acc;
+  }, {});
+  const coverageRows = Object.keys(channelCoverage).length
+    ? Object.entries(channelCoverage).map(([ch, v]) => ({ ch, msgs: v.msgs, flagged: v.flagged, col: v.flagged ? T.crit : T.low }))
+    : [{ ch: configuredChannel, msgs: 0, flagged: 0, col: T.low }];
   return (
     <div style={{ paddingInline:24, paddingBottom:48 }}>
       <div style={{ marginBottom:18 }}>
@@ -677,10 +689,7 @@ function SlackTab({ integrationStatus, slackEvents }) {
         </BCard>
         <BCard delay={0.1} style={{ padding:"18px" }}>
           <div style={{ fontFamily:"'Syne',sans-serif", fontSize:12, fontWeight:700, color:T.txt, marginBottom:14 }}>Channel Coverage</div>
-          {[
-            { ch:"#risklens-alerts",  msgs:events.length, flagged:flagged, col:flagged?T.crit:T.low },
-            { ch:"#delivery-status", msgs:Math.max(0, events.length - flagged), flagged:0, col:T.low },
-          ].map((ch,i) => (
+          {coverageRows.map((ch,i) => (
             <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"11px 0", borderBottom:`1px solid ${T.b0}` }}>
               <div>
                 <div style={{ fontSize:10, fontWeight:600, color:T.txt, fontFamily:"'JetBrains Mono',monospace" }}>{ch.ch}</div>
@@ -1111,6 +1120,7 @@ export default function Dashboard() {
     : 0;
   const rawHiPRs = githubEvents.filter((e) => e.type === "PR" && (e.band === "high" || e.band === "critical")).length;
   const rawNightCommits = commitTrend.reduce((sum, d) => sum + Number(d.count || 0), 0);
+  const hasActiveAlerts = rawHiPRs > 0 || developers.some((d) => d.s >= 60);
 
   const teamScore = useCountUp(rawTeamScore, 900, 120);
   const ciRate    = useCountUp(rawCiRate, 900, 150);
@@ -1195,21 +1205,29 @@ export default function Dashboard() {
     const fetchEventsAndDevelopers = async () => {
       if (!firstRepo) return;
 
-      const [pullsResp, commitsResp, teamRiskResp, allCommitsResp] = await Promise.allSettled([
+      const [pullsResp, commitsResp, teamRiskResp] = await Promise.allSettled([
         api.get("/github/pulls", { params: { repo: firstRepo } }),
         api.get("/github/commits", { params: { repo: firstRepo, days: 7 } }),
         api.get("/team-risk", { params: { repo: firstRepo } }),
-        Promise.all(
-          targetRepos.map((repo) => api.get("/github/commits", { params: { repo: repo?.full_name || repo?.name, days: 7 } }))
-        ),
       ]);
 
       const pulls = pullsResp.status === "fulfilled" ? (pullsResp.value.data?.pulls || []) : [];
       const commits = commitsResp.status === "fulfilled" ? (commitsResp.value.data?.commits || []) : [];
-      const allCommits = allCommitsResp.status === "fulfilled"
-        ? allCommitsResp.value.flatMap((resp) => resp?.data?.commits || [])
-        : commits;
-      setCommitTrend(buildCommitPressureTrend(allCommits));
+      setCommitTrend(buildCommitPressureTrend(commits));
+
+      // Improve first paint speed: expand trend to all repos in the background.
+      if (targetRepos.length > 1) {
+        Promise.allSettled(
+          targetRepos.map((repo) => api.get("/github/commits", { params: { repo: repo?.full_name || repo?.name, days: 7 } }))
+        ).then((responses) => {
+          const allCommits = responses
+            .filter((r) => r.status === "fulfilled")
+            .flatMap((r) => r.value?.data?.commits || []);
+          if (allCommits.length) {
+            setCommitTrend(buildCommitPressureTrend(allCommits));
+          }
+        }).catch(() => {});
+      }
 
       const pullEvents = pulls.slice(0, 4).map((pull) => {
         const score = scoreFromPull(pull);
@@ -1243,7 +1261,7 @@ export default function Dashboard() {
           .filter((e) => e.band === "high" || e.band === "critical")
           .slice(0, 8)
           .map((e) => ({
-            ch: "#risklens-alerts",
+            ch: integrationStatus?.slack_channel || "#risklens-alerts",
             msg: `Risk signal: ${e.label}`,
             author: e.branch || "system",
             time: e.time || "live",
@@ -1271,10 +1289,11 @@ export default function Dashboard() {
       }
     };
 
-    Promise.all([fetchRepoStats(), fetchEventsAndDevelopers()]).finally(() => {
+    fetchRepoStats();
+    fetchEventsAndDevelopers().finally(() => {
       setGithubDataLoading(false);
     });
-  }, [repos, riskResult?.score, user?.username]);
+  }, [repos, riskResult?.score, user?.username, integrationStatus?.slack_channel]);
 
   useEffect(() => {
     if (!integrationStatus?.jira) {
@@ -1384,6 +1403,7 @@ export default function Dashboard() {
         analyzing={analyzing}
         themeMode={themeMode}
         onToggleTheme={handleToggleTheme}
+        hasActiveAlerts={hasActiveAlerts}
       />
 
       <main style={{ paddingTop:80, position:"relative", zIndex:1 }}>
