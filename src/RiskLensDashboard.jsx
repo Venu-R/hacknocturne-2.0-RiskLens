@@ -11,8 +11,8 @@ const C = {
   rim:     "rgba(20,60,180,0.18)",
   rimHi:   "rgba(40,90,255,0.32)",
   txt:     "#C8DCFF",
-  muted:   "#4A6090",
-  ghost:   "#1E3060",
+  muted:   "#8AAAD4",
+  ghost:   "#6688BB",
   cobalt:  "#2356F6",
   sky:     "#4F8EFF",
   ice:     "#A8CBFF",
@@ -272,7 +272,7 @@ function TopBar({ active, setActive, sec }) {
           <div style={{ fontFamily:"'Syne',sans-serif", fontSize:15, fontWeight:800, letterSpacing:"-0.4px", lineHeight:1, color:C.txt }}>
             Risk<span style={{ color:C.sky }}>Lens</span>
           </div>
-          <div style={{ fontSize:7, color:C.ghost, letterSpacing:"0.22em", marginTop:1, fontFamily:"'DM Mono',monospace" }}>DEPLOY CO-PILOT</div>
+          <div style={{ fontSize:7, color:C.muted, letterSpacing:"0.22em", marginTop:1, fontFamily:"'DM Mono',monospace" }}>DEPLOY CO-PILOT</div>
         </div>
       </div>
       <nav style={{ display:"flex", alignItems:"center", gap:1, flex:1 }}>
@@ -515,7 +515,7 @@ function DashboardTab({ teamScore, ciRate, hiPRs, nightC }) {
             <Card key={i} delay={0.04+i*0.06} style={{ padding:"18px 20px" }}>
               <div style={{ position:"absolute", top:0, left:0, right:0, height:1, background:`linear-gradient(90deg,${k.ac}cc,transparent)` }}/>
               <div style={{ position:"absolute", top:0, left:0, right:0, height:44, background:`linear-gradient(180deg,${k.ac}09,transparent)`, pointerEvents:"none" }}/>
-              <div style={{ fontSize:8, color:C.ghost, letterSpacing:"0.18em", textTransform:"uppercase", marginBottom:10, fontFamily:"'DM Mono',monospace" }}>{k.label}</div>
+              <div style={{ fontSize:8, color:C.muted, letterSpacing:"0.18em", textTransform:"uppercase", marginBottom:10, fontFamily:"'DM Mono',monospace" }}>{k.label}</div>
               <div style={{ fontFamily:"'Syne',sans-serif", fontSize:38, fontWeight:900, color:b.c, lineHeight:1, marginBottom:10, textShadow:`0 0 22px ${b.c}44` }}>{k.val}</div>
               <div style={{ display:"flex", alignItems:"center", gap:7, fontSize:9, color:C.muted, fontFamily:"'DM Mono',monospace" }}>
                 <span style={{ fontSize:8, padding:"1px 5px", borderRadius:3, fontWeight:700, background:k.band==="low"?"rgba(0,229,176,0.1)":"rgba(232,41,58,0.1)", color:k.band==="low"?C.low:C.crit }}>{k.trend}</span>
@@ -540,7 +540,7 @@ function DashboardTab({ teamScore, ciRate, hiPRs, nightC }) {
           </div>
           <Gauge score={48}/>
           <div style={{ padding:"14px 20px 18px" }}>
-            <div style={{ fontSize:8, color:C.ghost, letterSpacing:"0.18em", textTransform:"uppercase", marginBottom:10, fontFamily:"'DM Mono',monospace" }}>Top Risk Signals</div>
+            <div style={{ fontSize:8, color:C.muted, letterSpacing:"0.18em", textTransform:"uppercase", marginBottom:10, fontFamily:"'DM Mono',monospace" }}>Top Risk Signals</div>
             {FACTORS.map(f => (
               <div key={f.n} style={{ marginBottom:9 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, marginBottom:4, fontFamily:"'DM Mono',monospace" }}>
