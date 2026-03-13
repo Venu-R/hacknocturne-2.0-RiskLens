@@ -6,11 +6,20 @@ from app.models import User
 user_bp = Blueprint('user', __name__)
 
 
+def _identity_as_int():
+    try:
+        return int(get_jwt_identity())
+    except (TypeError, ValueError):
+        return None
+
+
 @user_bp.route('/profile', methods=['GET'])
 @jwt_required()
 def get_profile():
     """Get user profile"""
-    user_id = get_jwt_identity()
+    user_id = _identity_as_int()
+    if user_id is None:
+        return jsonify({'error': 'Invalid authentication token'}), 401
     user = User.query.get(user_id)
     
     if not user:
@@ -25,7 +34,9 @@ def update_profile():
     """Update user profile"""
     from flask import request
     
-    user_id = get_jwt_identity()
+    user_id = _identity_as_int()
+    if user_id is None:
+        return jsonify({'error': 'Invalid authentication token'}), 401
     user = User.query.get(user_id)
     
     if not user:
@@ -48,7 +59,9 @@ def update_profile():
 @jwt_required()
 def get_stats():
     """Get user stats (LeetCode-like)"""
-    user_id = get_jwt_identity()
+    user_id = _identity_as_int()
+    if user_id is None:
+        return jsonify({'error': 'Invalid authentication token'}), 401
     user = User.query.get(user_id)
     
     if not user:

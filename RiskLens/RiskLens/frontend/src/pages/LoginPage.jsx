@@ -1,16 +1,27 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Eye, EyeOff, Mail, Lock, Github, ArrowRight, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, getOAuthURL, error, setError } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const oauthError = searchParams.get('error');
+  const oauthErrorMessage = {
+    invalid_state: 'OAuth session expired. Please try again.',
+    oauth_failed: 'OAuth login failed. Please try again.',
+    auth_failed: 'Authentication failed. Please try again.',
+    github_access_denied: 'GitHub login was cancelled or denied for this app.',
+    jira_access_denied: 'Your Atlassian account is not allowed for this Jira app.',
+    jira_site_access_required: 'Jira connect failed: this Atlassian account has no Jira site access. Join/create a Jira site, then try again.',
+  }[oauthError];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,17 +31,9 @@ export default function LoginPage() {
     const result = await login(email, password);
     
     if (result.success) {
-      navigate('/');
+      navigate('/dashboard');
     }
     setIsLoading(false);
-  };
-
-  const handleGitHubLogin = () => {
-    window.location.href = getOAuthURL('github');
-  };
-
-  const handleJiraLogin = () => {
-    window.location.href = getOAuthURL('jira');
   };
 
   return (
@@ -54,32 +57,32 @@ export default function LoginPage() {
           <h2 className="text-2xl font-semibold text-white mb-6">Welcome back</h2>
 
           {/* Error Alert */}
-          {error && (
+          {(error || oauthErrorMessage) && (
             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-2 text-red-400 text-sm">
               <AlertCircle size={16} />
-              {error}
+              {error || oauthErrorMessage}
             </div>
           )}
 
           {/* OAuth Buttons */}
           <div className="space-y-3 mb-6">
-            <button
-              onClick={handleGitHubLogin}
+            <a
+              href={getOAuthURL('github')}
               className="w-full flex items-center justify-center gap-3 bg-[#24292e] hover:bg-[#2f363d] text-white py-3 px-4 rounded-lg transition-all duration-200 border border-gray-700 hover:border-gray-600"
             >
               <Github size={20} />
               Continue with GitHub
-            </button>
+            </a>
             
-            <button
-              onClick={handleJiraLogin}
+            <a
+              href={getOAuthURL('jira')}
               className="w-full flex items-center justify-center gap-3 bg-[#0052cc] hover:bg-[#0747a6] text-white py-3 px-4 rounded-lg transition-all duration-200"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M0 3v18h24V3H0zm17.066 16l-4.578-4.578 1.414-1.414 3.164 3.164L21.95 7.5l1.414 1.414L17.066 19z"/>
               </svg>
               Continue with Jira
-            </button>
+            </a>
           </div>
 
           {/* Divider */}

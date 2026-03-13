@@ -9,6 +9,13 @@ import re
 auth_bp = Blueprint('auth', __name__)
 
 
+def _identity_as_int():
+    try:
+        return int(get_jwt_identity())
+    except (TypeError, ValueError):
+        return None
+
+
 @auth_bp.route('/signup', methods=['POST'])
 def signup():
     """Register a new user with email and password"""
@@ -52,7 +59,7 @@ def signup():
     db.session.commit()
     
     # Create JWT token
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(identity=str(user.id))
     
     return jsonify({
         'message': 'User created successfully',
@@ -86,7 +93,7 @@ def login():
     db.session.commit()
     
     # Create JWT token
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(identity=str(user.id))
     
     return jsonify({
         'message': 'Login successful',
@@ -106,7 +113,9 @@ def logout():
 @jwt_required()
 def get_current_user():
     """Get current authenticated user"""
-    user_id = get_jwt_identity()
+    user_id = _identity_as_int()
+    if user_id is None:
+        return jsonify({'error': 'Invalid authentication token'}), 401
     user = User.query.get(user_id)
     
     if not user:
@@ -119,12 +128,14 @@ def get_current_user():
 @jwt_required()
 def refresh_token():
     """Refresh JWT token"""
-    user_id = get_jwt_identity()
+    user_id = _identity_as_int()
+    if user_id is None:
+        return jsonify({'error': 'Invalid authentication token'}), 401
     user = User.query.get(user_id)
     
     if not user:
         return jsonify({'error': 'User not found'}), 404
     
-    access_token = create_access_token(identity=user_id)
+    access_token = create_access_token(identity=str(user_id))
     
     return jsonify({'token': access_token}), 200

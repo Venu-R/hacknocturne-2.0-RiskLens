@@ -4,6 +4,7 @@ from app import db
 from app.models import User, OAuthState
 import requests
 import secrets
+import os
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
 
@@ -50,7 +51,8 @@ def github_login():
         'client_id': current_app.config['GITHUB_CLIENT_ID'],
         'redirect_uri': current_app.config['GITHUB_REDIRECT_URI'],
         'scope': 'user:email read:user',
-        'state': state
+        'state': state,
+        'prompt': 'select_account'
     }
     
     url = f"https://github.com/login/oauth/authorize?{urlencode(params)}"
@@ -60,8 +62,12 @@ def github_login():
 @oauth_bp.route('/github/callback')
 def github_callback():
     """Handle GitHub OAuth callback"""
+    oauth_error = request.args.get('error')
     code = request.args.get('code')
     state = request.args.get('state')
+
+    if oauth_error:
+        return redirect(f"{current_app.config['FRONTEND_URL']}/login?error=github_access_denied")
     
     # Validate state
     if not validate_state(state, 'github'):
@@ -148,7 +154,7 @@ def github_callback():
     db.session.commit()
     
     # Create JWT token
-    jwt_token = create_access_token(identity=user.id)
+    jwt_token = create_access_token(identity=str(user.id))
     
     # Redirect to frontend with token
     return redirect(f"{current_app.config['FRONTEND_URL']}/auth/callback?token={jwt_token}")
@@ -160,15 +166,17 @@ def github_callback():
 def jira_login():
     """Initiate Jira/Atlassian OAuth flow"""
     state = generate_state('jira')
+    # Keep default scopes login-safe. Product/site scopes can be added via JIRA_OAUTH_SCOPES.
+    jira_scopes = os.environ.get('JIRA_OAUTH_SCOPES', 'read:me')
     
     params = {
         'audience': 'api.atlassian.com',
         'client_id': current_app.config['JIRA_CLIENT_ID'],
-        'scope': 'read:jira-user read:jira-work write:jira-work offline_access',
+        'scope': jira_scopes,
         'redirect_uri': current_app.config['JIRA_REDIRECT_URI'],
         'state': state,
         'response_type': 'code',
-        'prompt': 'consent'
+        'prompt': 'login consent'
     }
     
     url = f"https://auth.atlassian.com/authorize?{urlencode(params)}"
@@ -178,8 +186,15 @@ def jira_login():
 @oauth_bp.route('/jira/callback')
 def jira_callback():
     """Handle Jira/Atlassian OAuth callback"""
+    oauth_error = request.args.get('error')
     code = request.args.get('code')
     state = request.args.get('state')
+
+    if oauth_error:
+        error_description = request.args.get('error_description', '')
+        if 'permission' in error_description.lower() or 'access' in error_description.lower():
+            return redirect(f"{current_app.config['FRONTEND_URL']}/login?error=jira_site_access_required")
+        return redirect(f"{current_app.config['FRONTEND_URL']}/login?error=jira_access_denied")
     
     # Validate state
     if not validate_state(state, 'jira'):
@@ -259,7 +274,7 @@ def jira_callback():
     db.session.commit()
     
     # Create JWT token
-    jwt_token = create_access_token(identity=user.id)
+    jwt_token = create_access_token(identity=str(user.id))
     
     # Redirect to frontend with token
     return redirect(f"{current_app.config['FRONTEND_URL']}/auth/callback?token={jwt_token}")

@@ -12,7 +12,6 @@
 #   from app.ml.predictor import predict_risk
 # ─────────────────────────────────────────────────────────────────────────────
 
-import os
 import numpy as np
 import joblib
 import pandas as pd
@@ -49,6 +48,10 @@ FEATURE_NAMES = [
 
 N_FEATURES = len(FEATURE_NAMES)  # Must be 14
 
+# Precompute top factors once. Feature importances are model-level constants.
+_TOP_FACTOR_IDX = _MODEL.feature_importances_.argsort()[::-1][:3]
+_TOP_FACTORS = [FEATURE_NAMES[i] for i in _TOP_FACTOR_IDX]
+
 
 # ── Recommendation strings ────────────────────────────────────────────────────
 _RECOMMENDATIONS = {
@@ -68,6 +71,10 @@ def _build_vector(feature_dict: dict) -> np.ndarray:
     missing = [f for f in FEATURE_NAMES if f not in feature_dict]
     if missing:
         raise ValueError(f"Missing features in input dict: {missing}")
+
+    extra = [k for k in feature_dict if k not in FEATURE_NAMES]
+    if extra:
+        raise ValueError(f"Unexpected features in input dict: {extra}")
 
     vec = np.array([[feature_dict[f] for f in FEATURE_NAMES]], dtype=float)
 
@@ -116,22 +123,17 @@ def predict_risk(feature_dict: dict) -> dict:
     # 2. Scale (transform only — scaler was fitted on training data)
     vec_scaled = _SCALER.transform(pd.DataFrame(vec, columns=FEATURE_NAMES))
 
-    # 3. Predict
+    # 3. Predict (single inference call)
     proba = _MODEL.predict_proba(vec_scaled)[0]   # shape: (4,)
-    label = int(_MODEL.predict(vec_scaled)[0])    # 0, 1, 2, or 3
+    label = int(np.argmax(proba))                 # 0, 1, 2, or 3
 
     # 4. Derive SFRI integer score
     score = _compute_score(proba, label)
 
-    # 5. Top 3 feature importances (global model importances as proxy)
-    importances = _MODEL.feature_importances_
-    top_idx     = importances.argsort()[::-1][:3]
-    top_factors = [FEATURE_NAMES[i] for i in top_idx]
-
     return {
         "score":          score,
         "level":          LEVELS[label],
-        "top_factors":    top_factors,
+        "top_factors":    _TOP_FACTORS,
         "recommendation": _RECOMMENDATIONS[label],
     }
 
