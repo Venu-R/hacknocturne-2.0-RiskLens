@@ -25,6 +25,10 @@ It combines GitHub, Jira and Slack integration signals with an ML risk model to 
   - Slack delivery signals
   - Alerts
 
+## Video Demo Link: 
+
+https://www.youtube.com/watch?v=8bPEYczmymo
+
 ## Repository Structure
 
 ```text
@@ -236,3 +240,5 @@ If needed, use private window or log out from provider website.
 ## License
 
 Add your preferred license file (`LICENSE`) for open-source or internal distribution policy.
+
+
