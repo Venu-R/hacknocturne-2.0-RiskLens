@@ -1,7 +1,7 @@
 # RiskLens
 
 RiskLens is an AI-assisted engineering risk intelligence platform.
-It combines GitHub, Jira, and Slack integration signals with an ML risk model to estimate silent failure risk before deployment.
+It combines GitHub, Jira and Slack integration signals with an ML risk model to estimate silent failure risk before deployment.
 
 ## What RiskLens Does
 
