@@ -232,7 +232,5 @@ If needed, use private window or log out from provider website.
 - Never commit `.env` with real secrets.
 - Rotate OAuth and webhook secrets if accidentally exposed.
 - Use separate credentials for development and production.
-
 ## License
-
 Add your preferred license file (`LICENSE`) for open-source or internal distribution policy.
